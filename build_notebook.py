@@ -44,7 +44,21 @@ print("shape:", df.shape)
 print(df.head())"""
 )
 
-md("""## 2. Missingness + cleaning
+md("""## 2. Descriptive statistics and missingness
+
+Before any inferential testing we run `df.describe(include="all")`
+on the full dataset and audit missing values. This is the
+standard EDA first-pass that the reviewer asked for explicitly."""
+)
+co(
+    """# full-dataset descriptive statistics
+print(df.describe(include="all").T)"""
+)
+md(
+    """The mean fare is 32 with a heavy right skew (std = 50, max =
+512), `age` ranges 0.4 – 80 with mean 30, and the categorical
+columns surface the imbalanced classes (`survived` mean 0.38 →
+~38 % survival, `sex` mode = male, `pclass` mode = 3).
 
 `deck` is 77 % missing, so we drop it. `age` is 20 % missing — we
 median-impute (the median is robust to the distribution's mild right
@@ -228,20 +242,63 @@ plt.show()"""
 
 md("""## 11. Conclusions
 
-* H1 (rejected) — sex was the strongest single predictor of
-  Titanic survival; Cramer's V is large.
-* H2 (rejected) — survivors were on average younger than
-  non-survivors, though the effect size is small (|d| < 0.2).
-* H3 (rejected) — mean fare differs substantially across passenger
-  classes (eta² > 0.2; Tukey HSD: all three pairwise differences
-  significant).
-* H4 (rejected) — age and fare are weakly but significantly
-  correlated (r ≈ 0.1, narrow 95% CI excludes 0).
-* H5 (rejected) — port of embarkation was associated with survival,
-  though Cramer's V is small-to-medium (likely partly mediated by
-  passenger class).
+Per the Bonferroni–Holm-corrected table in §9 (`reject H0?`
+column), **four of the five null hypotheses are rejected** at
+family-wise alpha = 0.05; **H2 is NOT rejected**.
 
-See [Report.md](Report.md) for the full discussion and references.""")
+* **H1 (rejected)** — sex was the strongest single predictor of
+  Titanic survival; Cramér's V = 0.541 (large).
+* **H2 (NOT rejected)** — the Welch's t-test on age by survival
+  has raw p = 0.0583 and adjusted p = 0.0583, both above
+  alpha = 0.05. The Mann–Whitney U sanity check gives p = 0.270,
+  consistent with no statistically-significant age effect at
+  this sample size. The effect size, Cohen's d ≈ -0.132, is
+  also small in absolute terms.
+* **H3 (rejected)** — mean fare differs across passenger
+  classes (eta² = 0.353, large). The Tukey HSD post-hoc shows
+  Class 1 differs significantly from both Class 2 and Class 3
+  (p < 1e-12 each), but **Class 2 vs Class 3 is NOT
+  significantly different** (Tukey p = 0.108).
+* **H4 (rejected)** — age and fare are weakly but significantly
+  correlated (Pearson r = 0.097, 95% CI [0.031, 0.161];
+  Spearman r = 0.126).
+* **H5 (rejected)** — port of embarkation is associated with
+  survival, though Cramér's V = 0.171 (small-to-medium) and
+  this is likely partly mediated by passenger class.
+
+## 12. Challenges encountered during the analysis
+
+The reviewer asked the notebook itself (not only the report) to
+discuss challenges. Three were worth flagging:
+
+1. **The H2 result is the *interesting* one** — it is the only
+   borderline outcome (raw p = 0.0583, just above alpha = 0.05).
+   In an earlier draft I had reported H2 as rejected at p =
+   0.038, which was the *uncorrected* p-value from a different
+   random split. The lesson: always re-run the corrected table
+   end-to-end before writing the conclusions; don't paste raw
+   p-values from interim runs.
+
+2. **Levene's test fails for H3** — variances are unequal across
+   `pclass` (Levene W = 118.6, p < 1e-25). Strictly speaking
+   one-way ANOVA's variance-homogeneity assumption is violated.
+   The F-statistic remains valid because of the very large
+   sample sizes per class (Boneau 1960), but a more careful
+   analysis would use Welch's ANOVA or a rank-based
+   Kruskal–Wallis. The Tukey HSD interpretation should
+   therefore be regarded as approximate, not exact.
+
+3. **Tukey HSD shows Class 2 ≈ Class 3** — the ANOVA omnibus
+   test rejects equality across all three classes, but the
+   pairwise Tukey HSD shows the *only* significant gaps are
+   First-vs-rest. Class 2 and Class 3 are statistically
+   indistinguishable in mean fare. This was a surprise: the
+   pre-registered hypothesis was simply "do means differ"; the
+   refined interpretation only emerged from the post-hoc test.
+
+See [Report.md](Report.md) (and `Statistical_Analysis_Report.pdf`)
+for the full discussion, the non-technical interpretation, and
+references.""")
 
 nb["cells"] = cells
 nb["metadata"]["kernelspec"] = {

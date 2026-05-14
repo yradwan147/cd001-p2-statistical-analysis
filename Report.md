@@ -57,25 +57,106 @@ family-wise error rate.
 
 ## 5. Results
 
-After multiple-testing correction, **all five null hypotheses are
-rejected** at family-wise alpha = 0.05.
+The values below are the **exact outputs** of the executed
+notebook (cell 17, multipletests). Earlier drafts of this report
+contained a numerical error on H2 — the previous draft cited
+`raw p = 0.038, rejected`, which corresponds to a different
+random-state run and was inconsistent with the notebook. The
+table here matches the notebook verbatim.
 
 | # | Hypothesis | Raw p | Adjusted p | Reject H0? | Effect size |
 |---|---|---|---|---|---|
-| 1 | survived vs sex | 1.2e-58 | 6.0e-58 | yes | V = 0.54 (large) |
-| 2 | age by survival | 0.038 | 0.038 | yes | d = -0.13 (small) |
-| 3 | fare across pclass | 1.0e-84 | 4.0e-84 | yes | eta² = 0.25 (large) |
-| 4 | age vs fare correlation | 0.001 | 0.003 | yes | r = 0.11, 95% CI [0.05, 0.18] |
-| 5 | survived vs embarked | 1.8e-6 | 7.0e-6 | yes | V = 0.17 (small-medium) |
+| 1 | survived vs sex | 1.20e-58 | 4.79e-58 | **yes** | V = 0.541 (large) |
+| 2 | age by survival | **0.0583** | **0.0583** | **no** | d = -0.132 (small) |
+| 3 | fare across pclass | 1.03e-84 | 5.16e-84 | yes | eta² = 0.353 (large) |
+| 4 | age vs fare correlation | 3.87e-3 | 7.73e-3 | yes | r = 0.097, 95% CI [0.031, 0.161] |
+| 5 | survived vs embarked | 2.30e-6 | 6.90e-6 | yes | V = 0.171 (small-medium) |
 
 The headline finding is that **`sex` is the dominant survival
-signal** (Cramér's V = 0.54, the only large-effect result). Welch's
-t-test on age shows a statistically-significant but practically-
-small effect (Cohen's d ≈ −0.13). Fare differs strongly across
-passenger classes (eta² ≈ 0.25); the Tukey HSD shows all three
-pairwise gaps are significant at p < 1e-10.
+signal** (Cramér's V = 0.541, the only large-effect result).
 
-## 6. Ethical considerations
+### 5.1 H2 (age by survival) — the non-rejection
+
+Survivors had mean age 28.29 (sd 13.76, n=342), non-survivors
+30.03 (sd 12.50, n=549). Welch's t = -1.897, raw p = 0.0583.
+After Bonferroni–Holm correction the adjusted p is still 0.0583
+(H2 is the largest raw p in the family, so the correction does
+not change it). The Mann–Whitney U sanity check gives p = 0.270.
+Cohen's d ≈ -0.132 (small effect).
+
+In plain language: **the survivors were on average ~1.7 years
+younger than the non-survivors, but at n = 891 this difference is
+not statistically distinguishable from chance at alpha = 0.05.**
+The lifeboat-first-for-children policy *is* visible in the
+under-12 subset but the global mean comparison is dominated by
+the adult majority and so the effect washes out.
+
+### 5.2 H3 (fare across class) — Tukey HSD nuance
+
+The ANOVA omnibus test rejects equality of fares across the
+three classes with eta² = 0.353 (large). The Tukey HSD post-hoc
+shows:
+
+| Comparison | Tukey HSD p | Significant at 0.05? |
+|---|---|---|
+| Class 1 vs Class 2 | 2.86e-13 | yes |
+| Class 1 vs Class 3 | 2.86e-13 | yes |
+| Class 2 vs Class 3 | 0.108 | **no** |
+
+So Class 1 (First class, mean fare ≈ £84) is far above the
+other two, but Classes 2 and 3 (mean fares ≈ £21 and £14
+respectively) are not statistically distinguishable in mean fare
+even though their absolute medians differ. This refinement only
+became visible *after* the post-hoc test — a useful reminder
+that an omnibus rejection does not pin down which pairwise
+contrasts drive it.
+
+### 5.3 Variance-homogeneity caveat
+
+Levene's test gives W = 118.57, p < 1e-25 — variances across
+`pclass` are very unequal. Strictly speaking ANOVA's
+variance-homogeneity assumption is violated; the F-statistic
+remains valid here only because of the large per-class sample
+sizes (Boneau 1960). A formal redo would use Welch's ANOVA or
+Kruskal–Wallis. The Tukey HSD interpretation above should
+therefore be regarded as approximate.
+
+## 6. Interpretation for a non-technical audience
+
+(Plain-language summary aimed at a reader who does not know what
+a p-value is.)
+
+* **Whether you lived or died on the Titanic depended most on
+  whether you were a woman.** Looking at the manifest, women had
+  a 74% survival rate; men 19%. This is by far the strongest
+  signal in the data, and it reflects the lifeboat-loading
+  protocol of the time ("women and children first"), not any
+  biological property of survival.
+* **Your age made very little measurable difference.** Survivors
+  were about 1.7 years younger on average than non-survivors,
+  but at this sample size that difference is small enough that
+  it could plausibly be down to luck. We cannot conclude with
+  the data alone that young adults were systematically more
+  likely to survive than older adults.
+* **First-class passengers paid much more than the rest.** First-
+  class fares were several times higher than second- or
+  third-class fares on average. Second- and third-class fares
+  were close to each other.
+* **Older passengers paid slightly more on average than younger
+  passengers.** The relationship is real but weak — knowing
+  someone's age gives you only a small hint about their fare.
+* **Where you boarded the ship was related to whether you
+  survived,** though much of this effect is explained by the
+  class makeup at each port (the embarkation port and class
+  variables are correlated).
+
+The key takeaway for a non-technical reader: most of the
+patterns in the Titanic data are dominated by *social* variables
+(class, sex, port of departure) rather than *individual*
+variables (age). This was not a "natural disaster" so much as a
+socially-stratified emergency, and the data reflects that.
+
+## 7. Ethical considerations
 
 * **Confounding and the "women-and-children-first" policy** — the
   large survival × sex effect is a *behavioural* confound, not a
@@ -97,7 +178,7 @@ pairwise gaps are significant at p < 1e-10.
   professional obligation when reporting p-values (Wasserstein &
   Lazar, 2016).
 
-## 7. Limitations
+## 8. Limitations
 
 * No multivariate analysis — each test treats the variables
   pairwise. A logistic-regression model of `survived` on `sex`,
@@ -106,12 +187,18 @@ pairwise gaps are significant at p < 1e-10.
 * Bonferroni-Holm is conservative for correlated tests; the
   effective family-wise alpha is below 0.05 for several of the
   hypotheses here, which would be a problem if any of the raw
-  p-values were borderline (none are).
+  p-values were borderline — and **H2 is borderline**, at
+  p = 0.0583. A less conservative Benjamini–Hochberg correction
+  controlling FDR would put H2's adjusted p around 0.073, still
+  not rejected.
 * `pclass` was treated as a categorical 3-level factor for the
   ANOVA. Treating it as ordinal would give a different (and
   arguably more appropriate) trend test.
+* ANOVA's variance-homogeneity assumption is violated (Levene
+  W = 118.57, p < 1e-25); a Welch's ANOVA or Kruskal–Wallis
+  would be the strict-rigour alternative.
 
-## 8. Future work
+## 9. Future work
 
 * Repeat every test on a held-out 20 % random split to demonstrate
   the asymptotic guarantees on a smaller sample.
@@ -122,8 +209,10 @@ pairwise gaps are significant at p < 1e-10.
   so the *joint* effect of sex + class + age + fare can be
   evaluated against the marginal effects reported here.
 
-## References
+## 10. References
 
+* Boneau, C. A. (1960). The effects of violations of assumptions
+  underlying the t-test. *Psychological Bulletin*, 57(1), 49–64.
 * Cohen, J. (1988). *Statistical Power Analysis for the
   Behavioral Sciences* (2nd ed.). Lawrence Erlbaum Associates.
 * Field, A. (2018). *Discovering Statistics Using IBM SPSS
